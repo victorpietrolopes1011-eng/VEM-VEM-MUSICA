@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>VEM VEM IA — Chat livre</title>
+<meta name="description" content="IA de conversa com login próprio, sem Google, histórico salvo e bloqueio de conteúdo adulto." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ TELA DE LOGIN ============ -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-mark">VV</div>
+      <div>
+        <h1>VEM VEM <span>IA</span></h1>
+        <p class="auth-sub">Conta própria. Sem Gmail, sem Google, sem e-mail.</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="login">Entrar</button>
+      <button class="tab" data-tab="register">Criar conta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <form id="loginForm" class="auth-form">
+      <label>Usuário
+        <input type="text" id="loginUser" autocomplete="username" placeholder="seu_usuario" required />
+      </label>
+      <label>Senha
+        <div class="pw-wrap">
+          <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••" required />
+          <button type="button" class="pw-eye" data-target="loginPass">👁</button>
+        </div>
+      </label>
+      <label class="check"><input type="checkbox" id="rememberMe" checked /> <span>Continuar conectado neste aparelho</span></label>
+      <button type="submit" class="btn-primary">Entrar</button>
+      <p class="form-msg" id="loginMsg"></p>
+    </form>
+
+    <!-- REGISTRO -->
+    <form id="registerForm" class="auth-form hidden">
+      <label>Usuário
+        <input type="text" id="regUser" autocomplete="username" placeholder="mínimo 3 caracteres" required />
+      </label>
+      <label>Senha
+        <div class="pw-wrap">
+          <input type="password" id="regPass" autocomplete="new-password" placeholder="mínimo 6 caracteres" required />
+          <button type="button" class="pw-eye" data-target="regPass">👁</button>
+        </div>
+      </label>
+      <label>Repetir senha
+        <input type="password" id="regPass2" autocomplete="new-password" placeholder="repita a senha" required />
+      </label>
+      <label>Dica de recuperação <small>(opcional — só você vê)</small>
+        <input type="text" id="regHint" placeholder="ex: nome do meu cachorro" />
+      </label>
+      <button type="submit" class="btn-primary">Criar conta</button>
+      <p class="form-msg" id="regMsg"></p>
+    </form>
+
+    <p class="auth-foot">
+      Sua conta fica salva <b>só neste navegador</b> — a senha é guardada em hash SHA-256 com salt.
+      Nada é enviado para servidor nenhum.
+    </p>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="app hidden">
+
+  <aside id="sidebar" class="sidebar">
+    <div class="side-top">
+      <div class="brand"><span class="logo-mark sm">VV</span> VEM VEM <b>IA</b></div>
+      <button id="newChatBtn" class="btn-new">+ Nova conversa</button>
+      <input type="search" id="searchChats" class="search" placeholder="Buscar conversa..." />
+    </div>
+    <div id="chatList" class="chat-list"></div>
+    <div class="side-foot">
+      <button id="settingsBtn" class="side-btn">⚙ Configurações</button>
+      <div class="user-row">
+        <div id="userAvatar" class="avatar">?</div>
+        <div class="user-meta">
+          <strong id="userName">usuário</strong>
+          <span id="userStat">0 conversas</span>
+        </div>
+        <button id="logoutBtn" class="icon-btn" title="Sair">⎋</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button id="menuBtn" class="icon-btn only-mobile">☰</button>
+      <div class="top-title">
+        <h2 id="chatTitle">Nova conversa</h2>
+        <span id="modelBadge" class="badge">sem chave</span>
+      </div>
+      <div class="top-actions">
+        <button id="exportBtn" class="icon-btn" title="Exportar conversa">⭳</button>
+        <button id="deleteBtn" class="icon-btn danger" title="Apagar conversa">🗑</button>
+      </div>
+    </header>
+
+    <div id="messages" class="messages"></div>
+
+    <div class="composer-wrap">
+      <div id="filterAlert" class="filter-alert hidden"></div>
+      <form id="composer" class="composer">
+        <textarea id="input" rows="1" placeholder="Escreva sua mensagem...  (Enter envia, Shift+Enter pula linha)"></textarea>
+        <button type="submit" id="sendBtn" class="send">➤</button>
+      </form>
+      <p class="composer-hint">
+        Filtro de conteúdo adulto <b id="filterState">ativo</b> · histórico salvo automaticamente
+      </p>
+    </div>
+  </main>
+</div>
+
+<!-- ============ MODAL CONFIGURAÇÕES ============ -->
+<div id="settingsModal" class="modal hidden">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h3>Configurações</h3>
+      <button id="closeSettings" class="icon-btn">✕</button>
+    </header>
+
+    <div class="modal-body">
+      <section class="sect">
+        <h4>Conexão com a IA</h4>
+        <p class="muted">O site usa qualquer API compatível com OpenAI. Sua chave fica salva só neste navegador, nunca sai daqui a não ser para o provedor escolhido.</p>
+
+        <label>Provedor
+          <select id="cfgProvider">
+            <option value="https://api.openai.com/v1">OpenAI — api.openai.com</option>
+            <option value="https://openrouter.ai/api/v1">OpenRouter — openrouter.ai</option>
+            <option value="https://api.groq.com/openai/v1">Groq — api.groq.com</option>
+            <option value="https://api.deepseek.com/v1">DeepSeek — api.deepseek.com</option>
+            <option value="http://localhost:11434/v1">Ollama local — localhost:11434</option>
+            <option value="custom">Outro (digitar URL)</option>
+          </select>
+        </label>
+        <label id="customUrlWrap" class="hidden">URL base
+          <input type="text" id="cfgBaseUrl" placeholder="https://seu-endpoint/v1" />
+        </label>
+        <label>API Key
+          <div class="pw-wrap">
+            <input type="password" id="cfgKey" placeholder="sk-..." autocomplete="off" />
+            <button type="button" class="pw-eye" data-target="cfgKey">👁</button>
+          </div>
+        </label>
+        <label>Modelo
+          <input type="text" id="cfgModel" list="modelList" placeholder="gpt-4o-mini" />
+          <datalist id="modelList">
+            <option value="gpt-4o-mini"></option>
+            <option value="gpt-4o"></option>
+            <option value="llama-3.3-70b-versatile"></option>
+            <option value="deepseek-chat"></option>
+            <option value="anthropic/claude-3.5-sonnet"></option>
+            <option value="llama3"></option>
+          </datalist>
+        </label>
+        <div class="row2">
+          <label>Criatividade (temperature)
+            <input type="range" id="cfgTemp" min="0" max="2" step="0.1" value="0.8" />
+            <span id="tempVal" class="muted">0.8</span>
+          </label>
+          <label>Tamanho máx. da resposta
+            <input type="number" id="cfgMaxTok" min="256" max="32000" step="256" value="2048" />
+          </label>
+        </div>
+        <button id="testBtn" class="btn-ghost">Testar conexão</button>
+        <p id="testMsg" class="form-msg"></p>
+      </section>
+
+      <section class="sect">
+        <h4>Personalidade da IA</h4>
+        <p class="muted">Instrução de sistema — define o jeito dela falar.</p>
+        <textarea id="cfgSystem" rows="4" placeholder="Você é uma IA direta, sem enrolação, fala em português do Brasil..."></textarea>
+      </section>
+
+      <section class="sect">
+        <h4>Filtro de conteúdo adulto</h4>
+        <label class="check">
+          <input type="checkbox" id="cfgFilter" checked />
+          <span>Bloquear pornografia e vídeos adultos (recomendado)</span>
+        </label>
+        <p class="muted">Quando ativo, pedidos de pornografia, vídeos adultos e links desse tipo são bloqueados antes de sair do navegador. Os demais assuntos passam normalmente.</p>
+      </section>
+
+      <section class="sect danger-sect">
+        <h4>Dados da conta</h4>
+        <div class="btn-row">
+          <button id="exportAllBtn" class="btn-ghost">Exportar tudo (.json)</button>
+          <button id="clearChatsBtn" class="btn-ghost danger">Apagar todas as conversas</button>
+          <button id="deleteAccBtn" class="btn-ghost danger">Excluir minha conta</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="filter.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
